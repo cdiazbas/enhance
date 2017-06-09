@@ -1,12 +1,17 @@
 # HMI enhancer
 Enhance is a deep learning technique for deconvolving and superresolving HMI continuum images and magnetograms.
 
+![example](docs/imagen.gif?raw=true "Ic+Blos")
+
+
 train.py
 --------
 
 Example
 
+```
 python train.py --output=networks/test --epochs=20 --depth=5 --kernels=64 --action=start --model=keepsize --activation=relu --lr=1e-4 --lr_multiplier=1.0 --batchsize=32 --l2_regularization=1e-8
+```
 
     --action={start,continue}
         `start`: start a new calculation
@@ -25,3 +30,4 @@ python train.py --output=networks/test --epochs=20 --depth=5 --kernels=64 --acti
         `reflect` uses reflection padding, which strongly reduces these artifacts
     --activation={relu,elu}
         Type of activation function to be used in the network, except for the last convolutional layer, which uses a linear activation
+

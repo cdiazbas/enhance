@@ -11,7 +11,7 @@ The Helioseismic and Magnetic Imager (HMI) provides continuum images and magneto
  
 Our aim is developing a new method to enhance HMI data, simultaneously deconvolving and superresolving images and magnetograms. The resulting images will mimick observations with a diffraction-limited telescope twice the diameter of HMI. The method, that we term `Enhance`, is based on two deep fully convolutional neural networks that input patches of HMI observations and output deconvolved and superresolved data. The neural networks are trained on synthetic data obtained from simulations of the emergence of solar active regions.
  
-We have obtained deconvolved and supperresolved HMI images. To solve this ill-defined problem with infinite solutions we have used a neural network approach to add prior information from the simulations. We test Enhance against Hinode data that has been degraded to a 28 cm diameter telescope showing very good consistency. The code is open sourced for the community.
+We have obtained deconvolved and supperresolved HMI images. To solve this ill-defined problem with infinite solutions we have used a neural network approach to add prior information from the simulations. We test `Enhance` against Hinode data that has been degraded to a 28 cm diameter telescope showing very good consistency. The code is open sourced for the community.
 
 
 ## Using `Enhance` for prediction
@@ -25,11 +25,11 @@ python enhance.py -i samples/hmi.fits -t intensity -o output/hmi_enhanced.fits
 python enhance.py -i samples/blos.fits -t blos -o output/blos_enhanced.fits
 ```
 
-We provide a sample file to test `Enhance` (Fig. 1). The intensity images must be normalized to the quiet sun intensity and the magnetogram must be in kG.
+We provide two files to test `Enhance` (Fig. 1). The intensity images must be normalized to the quiet sun intensity and the magnetogram must be in kG.
 
 ## Using `Enhance` for training
 
-Pre-trained models are provided in the GitHub releases. If you want to train `Enhance` with your own images, we provide two scripts `train.py` (intensity network) and `train_blos.py` (magnetogram network) to this aim. Training your own is a delicate process that may require you to pick parameters based on your image dataset.
+Pre-trained models are provided in the GitHub releases. If you want to train `Enhance` with your own images, we provide two scripts `train.py` (intensity network) and `train_blos.py` (magnetogram network) to this aim.
 
 ```
 python train.py --output=networks/test --epochs=20 --depth=5 --kernels=64 --action=start --model=keepsize --activation=relu --lr=1e-4 --lr_multiplier=1.0 --batchsize=32 --l2_regularization=1e-8
@@ -63,7 +63,7 @@ The parameters are described here:
 AttributeError: 'module' object has no attribute 'convolution'
 ```
 
-2.- You must update keras to the last version. Message:
+2.- You must update keras to the version 2. Message:
 ```
 ImportError: cannot import name conv_utils
 ```

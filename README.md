@@ -29,7 +29,7 @@ We provide two files to test `Enhance` (Fig. 1). The intensity images must be no
 
 ## Using `Enhance` for training
 
-Pre-trained models are provided in the GitHub releases. If you want to train `Enhance` with your own images, we provide the script `train.py` to this aim.
+Pre-trained models are provided in the GitHub releases. If you want to train `Enhance` with your own images, we provide the script `train.py` to this aim. We also provide the original arguments used in the training of the networks. They can be found in the network directory.
 
 ```
 python train.py --output=network/test --epochs=20 --depth=5 --action=start --model=keepsize_reflect --activation=relu --lr=1e-4 --lr_multiplier=1.0 --batchsize=64 --noise=1e-3

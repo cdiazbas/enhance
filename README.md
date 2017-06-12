@@ -1,6 +1,6 @@
 # HMI enhancer
 
-`Enhance` is a deep learning technique for deconvolving and superresolving HMI continuum images and magnetograms. It is described in the paper, that you can find in [https://arxiv.org/abs/X](https://arxiv.org/abs/enlace).
+`Enhance` is a deep learning technique for deconvolving and superresolving HMI continuum images and magnetograms. It is described in the paper, that you can find in [https://arxiv.org/abs/1706.02933](https://arxiv.org/abs/1706.02933).
 
 ![example](docs/imagen.gif?raw=true "")
 **Figure 1** — Example of `Enhance` applied to real images.

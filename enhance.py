@@ -49,14 +49,14 @@ class enhance(object):
         if (self.network_type == 'encdec'):
             self.model = nn_model.encdec(self.nx, self.ny, 0.0, self.depth, n_filters=64)
 
-        if (self.network_type == 'encdec_reflect'):
-            self.model = nn_model.encdec_reflect(self.nx, self.ny, 0.0, self.depth, n_filters=64)
+        # if (self.network_type == 'encdec_reflect'):
+        #     self.model = nn_model.encdec_reflect(self.nx, self.ny, 0.0, self.depth, n_filters=64)
 
-        if (self.network_type == 'keepsize_zero'):
-            self.model = nn_model.keepsize_zero(self.nx, self.ny, 0.0, self.depth)
+        # if (self.network_type == 'keepsize_zero'):
+        #     self.model = nn_model.keepsize_zero(self.nx, self.ny, 0.0, self.depth)
 
-        if (self.network_type == 'keepsize_reflect'):
-            self.model = nn_model.keepsize_reflect(self.nx, self.ny, 0.0, self.depth, activation=self.activation)
+        if (self.network_type == 'keepsize'):
+            self.model = nn_model.keepsize(self.nx, self.ny, 0.0, self.depth,n_filters=64, l2_reg=1e-7)
         
         print("Loading weights...")
         self.model.load_weights("network/{0}_weights.hdf5".format(self.ntype))
@@ -80,6 +80,10 @@ class enhance(object):
             os.system('rm {0}'.format(self.output))
             print('Overwriting...')
         hdu.writeto('{0}'.format(self.output))
+
+        # import matplotlib.pyplot as plt
+        # plt.imshow(out[0,:,:,0])
+        # plt.savefig('hmi.pdf')
    
             
 if (__name__ == '__main__'):
@@ -88,9 +92,9 @@ if (__name__ == '__main__'):
     parser.add_argument('-i','--input', help='input')
     parser.add_argument('-o','--out', help='out')
     parser.add_argument('-d','--depth', help='depth', default=5)
-    parser.add_argument('-m','--model', help='model', choices=['encdec', 'encdec_reflect', 'keepsize_zero', 'keepsize_reflect'], default='keepsize_reflect')
+    parser.add_argument('-m','--model', help='model', choices=['encdec', 'encdec_reflect', 'keepsize_zero', 'keepsize'], default='keepsize')
     parser.add_argument('-c','--activation', help='Activation', choices=['relu', 'elu'], default='relu')
-    parser.add_argument('-a','--action', help='action', choices=['cube', 'movie'], default='cube')
+    # parser.add_argument('-a','--action', help='action', choices=['cube', 'movie'], default='cube')
     parser.add_argument('-t','--type', help='type', choices=['intensity', 'blos'], default='intensity')
     parsed = vars(parser.parse_args())
 
@@ -101,5 +105,7 @@ if (__name__ == '__main__'):
     out = enhance('{0}'.format(parsed['input']), depth=int(parsed['depth']), model=parsed['model'], activation=parsed['activation'],ntype=parsed['type'], output=parsed['out'])
     out.define_network(image=imgs)
     out.predict()
+
+    # python enhance.py -i samples/hmi.fits -t intensity -o output/hmi_enhanced.fits
 
     # python enhance.py -i samples/blos.fits -t blos -o output/blos_enhanced.fits

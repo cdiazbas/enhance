@@ -32,7 +32,7 @@ We provide two files to test `Enhance` (Fig. 1). The intensity images must be no
 Pre-trained models are provided in the GitHub releases. If you want to train `Enhance` with your own images, we provide the script `train.py` to this aim. We also provide the original arguments used in the training of the networks. They can be found in the network directory.
 
 ```
-python train.py --output=network/test --epochs=20 --depth=5 --action=start --model=keepsize_reflect --activation=relu --lr=1e-4 --lr_multiplier=1.0 --batchsize=64 --noise=1e-3
+python train.py --output=network/test --epochs=15 --depth=5 --action=start --model=keepsize --lr=1e-4 --lr_multiplier=1.0 --batchsize=32 --noise=1e-3 --l2_regularization=1e-6
 ```
 
 The parameters are described here:
@@ -49,11 +49,16 @@ The parameters are described here:
         Noise to add during training
     --depth=5
         Number of residual blocks used in the network. This number will affect differently depending on the topology of the network
-    --model={keepsize_reflect,encdec}
+    --model={keepsize,encdec}
         `keepsize_reflect ` is a network that maintains the size of the input and output, with an eventual upsampling at the end in case of superresolution
         `encdec` is an encoder-decoder network
     --activation={relu,elu}
         Type of activation function to be used in the network, except for the last convolutional layer, which uses a linear activation
+    --lr=1e-4
+        Learning rate of the neural network
+    --batchsize=32
+        Batch size used during the training
+
 
 ## Troubleshooting Problems
 
@@ -67,6 +72,7 @@ AttributeError: 'module' object has no attribute 'convolution'
 ImportError: cannot import name conv_utils
 ```
 
-3.- Only Python3 supports "context.redirect_stdout" and no Python2.7
+3.- Only Python3 supports "context.redirect_stdout" and no Python2.7, but now
+these scripts are compatible with Python2.7
 
 4.- ImportError: Failed to import pydot. You must install pydot and graphviz for `pydotprint` to work.

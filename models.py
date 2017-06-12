@@ -1,11 +1,10 @@
-from keras.layers import Input, Conv2D, Activation, BatchNormalization, GaussianNoise, UpSampling2D
+from keras.layers import Input, Conv2D, Activation, BatchNormalization, GaussianNoise, add, UpSampling2D
 from keras.models import Model
 from keras.regularizers import l2
 import tensorflow as tf
 from keras.engine.topology import Layer
 from keras.engine import InputSpec
 from keras.utils import conv_utils
-from keras.layers import add
 
 def spatial_reflection_2d_padding(x, padding=((1, 1), (1, 1)), data_format=None):
     """Pads the 2nd and 3rd dimensions of a 4D tensor.
@@ -142,21 +141,18 @@ class ReflectionPadding2D(Layer):
         base_config = super(ReflectionPadding2D, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
-# def padding(block_function, filters, repetitions, is_first_layer=False):
-    """Builds a residual block with repeating bottleneck blocks.
+def keepsize_256(nx, ny, noise, depth, activation='relu', n_filters=64, l2_reg=1e-7):
     """
-    # def f(input):
-
-
-def keepsize_reflect(nx, ny, noise, depth, activation='relu', padding='zero'):
+    Deep residual network that keeps the size of the input throughout the whole network
+    """
 
     def residual(inputs, n_filters):
         x = ReflectionPadding2D()(inputs)
-        x = Conv2D(n_filters, (3, 3), padding='valid', kernel_initializer='he_normal', kernel_regularizer=l2(1e-7))(x)
+        x = Conv2D(n_filters, (3, 3), padding='valid', kernel_initializer='he_normal', kernel_regularizer=l2(l2_reg))(x)
         x = BatchNormalization()(x)
         x = Activation(activation)(x)
         x = ReflectionPadding2D()(x)
-        x = Conv2D(n_filters, (3, 3), padding='valid', kernel_initializer='he_normal', kernel_regularizer=l2(1e-7))(x)
+        x = Conv2D(n_filters, (3, 3), padding='valid', kernel_initializer='he_normal', kernel_regularizer=l2(l2_reg))(x)
         x = BatchNormalization()(x)
         x = add([x, inputs])
 
@@ -166,149 +162,77 @@ def keepsize_reflect(nx, ny, noise, depth, activation='relu', padding='zero'):
     x = GaussianNoise(noise)(inputs)
 
     x = ReflectionPadding2D()(x)
-    x = Conv2D(64, (3, 3), padding='valid', kernel_initializer='he_normal', kernel_regularizer=l2(1e-7))(x)
+    x = Conv2D(n_filters, (3, 3), padding='valid', kernel_initializer='he_normal', kernel_regularizer=l2(l2_reg))(x)
     x0 = Activation(activation)(x)
 
-    x = residual(x0, 64)
+    x = residual(x0, n_filters)
 
     for i in range(depth-1):
-        x = residual(x, 64)
+        x = residual(x, n_filters)
 
     x = ReflectionPadding2D()(x)
-    x = Conv2D(64, (3, 3), padding='valid', kernel_initializer='he_normal', kernel_regularizer=l2(1e-7))(x)
+    x = Conv2D(n_filters, (3, 3), padding='valid', kernel_initializer='he_normal', kernel_regularizer=l2(l2_reg))(x)
     x = BatchNormalization()(x)
     x = add([x, x0])
 
+# Upsampling for superresolution
     x = UpSampling2D()(x)
     x = ReflectionPadding2D()(x)
-    x = Conv2D(64, (3, 3), padding='valid', kernel_initializer='he_normal', kernel_regularizer=l2(1e-7))(x)
+    x = Conv2D(4*n_filters, (3, 3), padding='valid', kernel_initializer='he_normal', kernel_regularizer=l2(l2_reg))(x)
     x = Activation(activation)(x)
 
-    final = Conv2D(1, (1, 1), padding='same', kernel_initializer='he_normal', kernel_regularizer=l2(1e-7))(x)
+    final = Conv2D(1, (1, 1), padding='same', kernel_initializer='he_normal', kernel_regularizer=l2(l2_reg))(x)
 
     return Model(inputs=inputs, outputs=final)
 
-def keepsize_zero(nx, ny, noise, depth):
+def keepsize(nx, ny, noise, depth, activation='relu', n_filters=64, l2_reg=1e-7):
     """
-    Keepsize
+    Deep residual network that keeps the size of the input throughout the whole network
     """
+
     def residual(inputs, n_filters):
-        x = Conv2D(n_filters, (3, 3), padding='same', kernel_initializer='he_normal')(inputs)
+        x = ReflectionPadding2D()(inputs)
+        x = Conv2D(n_filters, (3, 3), padding='valid', kernel_initializer='he_normal', kernel_regularizer=l2(l2_reg))(x)
         x = BatchNormalization()(x)
-        x = Activation('relu')(x)
-        x = Conv2D(n_filters, (3, 3), padding='same', kernel_initializer='he_normal')(x)
+        x = Activation(activation)(x)
+        x = ReflectionPadding2D()(x)
+        x = Conv2D(n_filters, (3, 3), padding='valid', kernel_initializer='he_normal', kernel_regularizer=l2(l2_reg))(x)
         x = BatchNormalization()(x)
         x = add([x, inputs])
 
-        return x    
+        return x
 
-    def residual_v2(inputs, n_filters):
-        x = BatchNormalization()(inputs)
-        x = Activation('relu')(x)
-        x = Conv2D(n_filters, (3, 3), padding='same', kernel_initializer='he_normal')(x)
-        x = BatchNormalization()(x)
-        x = Activation('relu')(x)    
-        x = Conv2D(n_filters, (3, 3), padding='same', kernel_initializer='he_normal')(x)
-        
-        x = add([x, inputs])
-
-        return x    
-
-    inputs = Input(shape=(nx, ny, 12))
+    inputs = Input(shape=(nx, ny, 1))
     x = GaussianNoise(noise)(inputs)
 
-    x = Conv2D(64, (3, 3), padding='same', kernel_initializer='he_normal')(x)
+    x = ReflectionPadding2D()(x)
+    x = Conv2D(n_filters, (3, 3), padding='valid', kernel_initializer='he_normal', kernel_regularizer=l2(l2_reg))(x)
+    x0 = Activation(activation)(x)
+
+    x = residual(x0, n_filters)
+
+    for i in range(depth-1):
+        x = residual(x, n_filters)
+
+    x = ReflectionPadding2D()(x)
+    x = Conv2D(n_filters, (3, 3), padding='valid', kernel_initializer='he_normal', kernel_regularizer=l2(l2_reg))(x)
     x = BatchNormalization()(x)
-    x = Activation('relu')(x)
+    x = add([x, x0])
 
-    for i in range(depth):
-        x = residual(x, 64)
+# Upsampling for superresolution
+    x = UpSampling2D()(x)
+    x = ReflectionPadding2D()(x)
+    x = Conv2D(n_filters, (3, 3), padding='valid', kernel_initializer='he_normal', kernel_regularizer=l2(l2_reg))(x)
+    x = Activation(activation)(x)
 
-    x = Conv2D(64, (3, 3), padding='same', kernel_initializer='he_normal')(x)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-
-    final = Conv2D(1, (1, 1), activation='relu', padding='same', kernel_initializer='he_normal')(x)
+    final = Conv2D(1, (1, 1), padding='same', kernel_initializer='he_normal', kernel_regularizer=l2(l2_reg))(x)
 
     return Model(inputs=inputs, outputs=final)
 
 
-def encdec(nx, ny, noise, depth, n_filters):
+def encdec(nx, ny, noise, depth, activation='relu', n_filters=64):
     """
-    Encoder-decoder
-    """
-    def residual(inputs, n_filters):
-        x = BatchNormalization()(inputs)
-        x = Activation('relu')(x)        
-        x = Conv2D(n_filters, (3, 3), padding='same', kernel_initializer='he_normal', kernel_regularizer=l2(1e-7))(x)
-        x = BatchNormalization()(x)
-        x = Activation('relu')(x)    
-        x = Conv2D(n_filters, (3, 3), padding='same', kernel_initializer='he_normal', kernel_regularizer=l2(1e-7))(x)    
-        x = add([x, inputs])
-
-        return x    
-
-    def residual_down(inputs, n_filters):
-        x = BatchNormalization()(inputs)
-        x = Activation('relu')(x)
-        x = Conv2D(n_filters, (3, 3), strides=2, padding='same', kernel_initializer='he_normal', kernel_regularizer=l2(1e-7))(x)
-        x = BatchNormalization()(x)
-        x = Activation('relu')(x)    
-        x = Conv2D(n_filters, (3, 3), padding='same', kernel_initializer='he_normal', kernel_regularizer=l2(1e-7))(x)
-
-        shortcut = Conv2D(n_filters, (1, 1), strides=2, padding='same', kernel_initializer='he_normal', kernel_regularizer=l2(1e-7))(inputs)
-
-        x = add([x, shortcut])
-
-        return x
-
-    def residual_up(inputs, n_filters):
-        x_up = UpSampling2D(size=(2,2))(inputs)
-
-        x = BatchNormalization()(x_up)
-        x = Activation('relu')(x)
-        x = Conv2D(n_filters, (3, 3), padding='same', kernel_initializer='he_normal', kernel_regularizer=l2(1e-7))(x)
-        x = BatchNormalization()(x)
-        x = Activation('relu')(x)    
-        x = Conv2D(n_filters, (3, 3), padding='same', kernel_initializer='he_normal', kernel_regularizer=l2(1e-7))(x)
-
-        shortcut = Conv2D(n_filters, (1, 1), padding='same', kernel_initializer='he_normal', kernel_regularizer=l2(1e-7))(x_up)
-
-        x = add([x, shortcut])
-
-        return x
-
-    inputs = Input(shape=(nx, ny, 12))
-
-# (88,88,12)
-
-    x = Conv2D(n_filters, (3, 3), padding='same', kernel_initializer='he_normal', kernel_regularizer=l2(1e-7))(inputs)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-
-# (88,88,64)
-
-    x = residual_down(x, n_filters*2)   # (44,44,128)
-    x = residual_down(x, n_filters*4)   # (22,22,256)
-    x = residual_down(x, n_filters*4)   # (11,11,512)
-
-    for i in range(depth):
-        x = residual(x, n_filters*4)
-
-    x = residual_up(x, n_filters*4)   # (22,22,256)
-    x = residual_up(x, n_filters*2)   # (44,44,128)
-    x = residual_up(x, n_filters)     # (88,88,64)
-
-    x = residual(x, n_filters)
-
-    final = Conv2D(1, (1, 1), activation='relu', padding='same', kernel_initializer='he_normal', kernel_regularizer=l2(1e-7))(x)
-
-    return Model(inputs=inputs, outputs=final)
-
-
-def encdec_reflect(nx, ny, noise, depth, n_filters, activation):
-    """
-    Encoder-decoder
+    Deep residual network using an encoder-decoder approach. It uses reflection padding
     """
     def residual(inputs, n_filters):
 
@@ -357,30 +281,50 @@ def encdec_reflect(nx, ny, noise, depth, n_filters, activation):
 
         return x
 
-    inputs = Input(shape=(nx, ny, 12))
+    inputs = Input(shape=(nx, ny, 1))
 
-# (88,88,12)
-
+# in: (nx,ny,1) -> out: (nx,ny,n_filters)
     x = ReflectionPadding2D()(inputs)
-    x = Conv2D(n_filters, (3, 3), padding='valid', kernel_initializer='he_normal', kernel_regularizer=l2(1e-7))(inputs)
+    x = Conv2D(n_filters, (3, 3), padding='valid', kernel_initializer='he_normal', kernel_regularizer=l2(1e-7))(x)
     x = BatchNormalization()(x)
     x = Activation(activation)(x)
 
-# (88,88,64)
+# in: (nx,ny,n_filters) -> out: (nx/2,ny/2,2*n_filters)
+    x = ReflectionPadding2D()(x)
+    x = Conv2D(2*n_filters, (3, 3), strides=2, padding='valid', kernel_initializer='he_normal', kernel_regularizer=l2(1e-7))(x)
+    x = BatchNormalization()(x)
+    x = Activation(activation)(x)
 
-    x = residual_down(x, n_filters*2)   # (44,44,128)
-    x = residual_down(x, n_filters*4)   # (22,22,256)
-    x = residual_down(x, n_filters*4)   # (11,11,512)
+# in: (nx/2,ny/2,2*n_filters) -> out: (nx/4,ny/4,4*n_filters)
+    # x = ReflectionPadding2D()(x)
+    # x = Conv2D(4*n_filters, (3, 3), strides=2, padding='valid', kernel_initializer='he_normal', kernel_regularizer=l2(1e-7))(x)
+    # x = BatchNormalization()(x)
+    # x = Activation(activation)(x)
 
     for i in range(depth):
-        x = residual(x, n_filters*4)
+        x = residual(x, 2*n_filters)
 
-    x = residual_up(x, n_filters*4)   # (22,22,256)
-    x = residual_up(x, n_filters*2)   # (44,44,128)
-    x = residual_up(x, n_filters)     # (88,88,64)
+# in: (nx/4,ny/4,4*n_filters) -> out: (nx/2,ny/2,2*n_filters)
+    # x = UpSampling2D(size=(2,2))(x)
+    # x = ReflectionPadding2D()(x)
+    # x = Conv2D(2*n_filters, (3, 3), padding='valid', kernel_initializer='he_normal', kernel_regularizer=l2(1e-7))(x)        
+    # x = BatchNormalization()(x)
+    # x = Activation(activation)(x)
 
-    x = residual(x, n_filters)
+# in: (nx/2,ny/2,2*n_filters) -> out: (nx,ny,n_filters)
+    x = UpSampling2D(size=(2,2))(x)
+    x = ReflectionPadding2D()(x)
+    x = Conv2D(n_filters, (3, 3), padding='valid', kernel_initializer='he_normal', kernel_regularizer=l2(1e-7))(x)        
+    x = BatchNormalization()(x)
+    x = Activation(activation)(x)
 
-    final = Conv2D(1, (1, 1), activation='relu', padding='same', kernel_initializer='he_normal', kernel_regularizer=l2(1e-7))(x)
+# in: (nx,ny,n_filters) -> out: (2*nx,2*ny,n_filters)
+    x = UpSampling2D(size=(2,2))(x)
+    x = ReflectionPadding2D()(x)
+    x = Conv2D(n_filters, (3, 3), padding='valid', kernel_initializer='he_normal', kernel_regularizer=l2(1e-7))(x)        
+    x = BatchNormalization()(x)
+    x = Activation(activation)(x)
+
+    final = Conv2D(1, (1, 1), padding='same', kernel_initializer='he_normal', kernel_regularizer=l2(1e-7))(x)
 
     return Model(inputs=inputs, outputs=final)

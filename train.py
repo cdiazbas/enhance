@@ -1,5 +1,5 @@
 import numpy as np
-from astropy.io import fits
+# from astropy.io import fits
 import platform
 import os
 import json
@@ -33,7 +33,7 @@ if (platform.node() != 'viga'):
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 from keras.callbacks import ModelCheckpoint, Callback, LearningRateScheduler
-from keras.models import model_from_json
+# from keras.models import model_from_json
 from keras.optimizers import Adam
 from keras.utils import plot_model
 import tensorflow as tf
@@ -98,7 +98,7 @@ class LossHistory(Callback):
 
 class deep_network(object):
 
-    def __init__(self, root, noise, option, depth, network_type, activation, lr, lr_multiplier, batch_size):
+    def __init__(self, root, noise, option, depth, network_type, activation, lr, lr_multiplier, batch_size,l2_regularization):
 
 # Only allocate needed memory
         config = tf.ConfigProto()
@@ -116,6 +116,7 @@ class deep_network(object):
         self.lr = lr
         self.lr_multiplier = lr_multiplier
         self.batch_size = batch_size
+        self.l2_regularization = l2_regularization
 
         tmp = np.loadtxt('/net/vena/scratch/Dropbox/GIT/DeepLearning/hmi_super/training/normalization.txt')
         self.median_HMI, self.median_SST = tmp[0], tmp[1]
@@ -184,8 +185,8 @@ class deep_network(object):
         if (self.network_type == 'encdec'):
             self.model = nn_model.encdec(self.nx, self.ny, self.noise, self.depth, activation=self.activation)
 
-        if (self.network_type == 'keepsize_reflect'):
-            self.model = nn_model.keepsize_reflect(self.nx, self.ny, self.noise, self.depth, activation=self.activation)
+        if (self.network_type == 'keepsize'):
+            self.model = nn_model.keepsize(self.nx, self.ny, self.noise, self.depth, activation=self.activation)
         
             
         json_string = self.model.to_json()
@@ -209,8 +210,8 @@ class deep_network(object):
         if (self.network_type == 'encdec'):
             self.model = nn_model.encdec(self.nx, self.ny, self.noise, self.depth, activation=self.activation)
 
-        if (self.network_type == 'keepsize_reflect'):
-            self.model = nn_model.keepsize_reflect(self.nx, self.ny, self.noise, self.depth, activation=self.activation)
+        if (self.network_type == 'keepsize'):
+            self.model = nn_model.keepsize(self.nx, self.ny, self.noise, self.depth, activation=self.activation,l2_reg=self.l2_regularization)
 
         self.model.load_weights("{0}_{1}_weights.hdf5".format(self.root, self.depth))
 
@@ -249,10 +250,10 @@ if (__name__ == '__main__'):
     parser.add_argument('-d','--depth', help='Depth', default=5)
     parser.add_argument('-k','--kernels', help='N. kernels', default=64)
     parser.add_argument('-a','--action', help='Action', choices=['start', 'continue'], required=True)
-    parser.add_argument('-m','--model', help='Model', choices=['encdec', 'keepsize_reflect'], required=True, default='keepsize_reflect')    
-    parser.add_argument('-c','--activation', help='Activation', choices=['relu', 'elu'], required=True, default='relu')
+    parser.add_argument('-m','--model', help='Model', choices=['encdec', 'keepsize'], required=True, default='keepsize')    
+    parser.add_argument('-c','--activation', help='Activation', choices=['relu', 'elu'], required=False, default='relu')
     parser.add_argument('-lr','--lr', help='Learning rate', required=True, default=1e-4)
-    parser.add_argument('-lrm','--lr_multiplier', help='Learning rate multiplier', required=True, default=0.96)
+    parser.add_argument('-lrm','--lr_multiplier', help='Learning rate multiplier', required=False, default=1.0)
     parser.add_argument('-l2','--l2_regularization', help='L2 regularization', required=False, default=1e-7)
     parser.add_argument('-b','--batchsize', help='Batch size', required=True, default=32)
     parsed = vars(parser.parse_args())
@@ -267,12 +268,14 @@ if (__name__ == '__main__'):
     lr = float(parsed['lr'])
     lr_multiplier = float(parsed['lr_multiplier'])
     batch_size = int(parsed['batchsize'])
+    l2_regularization = float(parsed['l2_regularization'])
+
 
 # Save parameters used
     with open("{0}_{1}_args.json".format(root, depth), 'w') as f:
         json.dump(parsed, f)
 
-    out = deep_network(root, noise, option, depth, network_type, activation, lr, lr_multiplier, batch_size)
+    out = deep_network(root, noise, option, depth, network_type, activation, lr, lr_multiplier, batch_size, l2_regularization)
 
     if (option == 'start'):           
         out.define_network(float(parsed['l2_regularization']))        

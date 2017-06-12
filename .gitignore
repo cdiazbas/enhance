@@ -102,3 +102,10 @@ ENV/
 
 # MARKDOWN en html
 *.html
+
+# Some tests (nets)
+network/test*
+
+# Some test (images)
+*.pdf
+

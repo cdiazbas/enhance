@@ -14,7 +14,13 @@ Our aim is developing a new method to enhance HMI data, simultaneously deconvolv
 We have obtained deconvolved and supperresolved HMI images. To solve this ill-defined problem with infinite solutions we have used a neural network approach to add prior information from the simulations. We test `Enhance` against Hinode data that has been degraded to a 28 cm diameter telescope showing very good consistency. The code is open sourced for the community.
 
 
+## Requirements of `Enhance`
+
+As this software was developed with some specific libraries you have to install: "astropy", "keras" and "tensorflow". If `conda` is installed in your machine you can type: `conda install astropy`, `conda install tensorflow`, `conda install keras`. We only support keras v2.
+
+
 ## Using `Enhance` for prediction
+
 A list of example command lines you can use with the pre-trained models provided in the GitHub releases. The script we provide reads the observations from a FITS file, but you can modify the script to provide the observations from any other file. To change between each network you only have to change the parameter `-t` as follow:
 
 ```

@@ -105,7 +105,10 @@ if (__name__ == '__main__'):
     out = enhance('{0}'.format(parsed['input']), depth=int(parsed['depth']), model=parsed['model'], activation=parsed['activation'],ntype=parsed['type'], output=parsed['out'])
     out.define_network(image=imgs)
     out.predict()
-
+    # To avoid the TF_DeleteStatus message:
+    # https://github.com/tensorflow/tensorflow/issues/3388
+    ktf.clear_session()
+    
     # python enhance.py -i samples/hmi.fits -t intensity -o output/hmi_enhanced.fits
 
     # python enhance.py -i samples/blos.fits -t blos -o output/blos_enhanced.fits

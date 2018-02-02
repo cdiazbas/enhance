@@ -47,7 +47,7 @@ class enhance(object):
         self.ny = image.shape[0]
 
         if (self.network_type == 'encdec'):
-            self.model = nn_model.encdec(self.nx, self.ny, 0.0, self.depth, n_filters=64)
+            self.model = nn_model.encdec(self.ny, self.nx, 0.0, self.depth, n_filters=64)
 
         # if (self.network_type == 'encdec_reflect'):
         #     self.model = nn_model.encdec_reflect(self.nx, self.ny, 0.0, self.depth, n_filters=64)
@@ -56,7 +56,7 @@ class enhance(object):
         #     self.model = nn_model.keepsize_zero(self.nx, self.ny, 0.0, self.depth)
 
         if (self.network_type == 'keepsize'):
-            self.model = nn_model.keepsize(self.nx, self.ny, 0.0, self.depth,n_filters=64, l2_reg=1e-7)
+            self.model = nn_model.keepsize(self.ny, self.nx, 0.0, self.depth,n_filters=64, l2_reg=1e-7)
         
         print("Loading weights...")
         self.model.load_weights("network/{0}_weights.hdf5".format(self.ntype))

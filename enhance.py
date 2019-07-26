@@ -30,6 +30,9 @@ class enhance(object):
         config.gpu_options.allow_growth=True
         session = tf.Session(config=config)
         ktf.set_session(session)
+        self.hdu = fits.open(inputFile)
+        self.image = self.hdu[0].data
+        self.header = self.hdu[0].header
 
         self.input = inputFile
         self.depth = depth
@@ -39,10 +42,12 @@ class enhance(object):
         self.output = output
 
 
-    def define_network(self, image):
+    def define_network(self): #, image):
         print("Setting up network...")
 
-        self.image = image
+        #self.image = image
+        image = self.hdu[0].data
+        print(image.shape)
         self.nx = image.shape[1]
         self.ny = image.shape[0]
 
@@ -57,24 +62,24 @@ class enhance(object):
 
         if (self.network_type == 'keepsize'):
             self.model = nn_model.keepsize(self.ny, self.nx, 0.0, self.depth,n_filters=64, l2_reg=1e-7)
-        
+
         print("Loading weights...")
         self.model.load_weights("network/{0}_weights.hdf5".format(self.ntype))
 
-    
+
     def predict(self):
         print("Predicting validation data...")
 
         input_validation = np.zeros((1,self.ny,self.nx,1), dtype='float32')
         input_validation[0,:,:,0] = self.image
-        
+
         start = time.time()
         out = self.model.predict(input_validation)
         end = time.time()
-        print("Prediction took {0:3.2} seconds...".format(end-start))        
-        
+        print("Prediction took {0:3.2} seconds...".format(end-start))
+
         print("Saving data...")
-        hdu = fits.PrimaryHDU(out[0,:,:,0])
+        hdu = fits.PrimaryHDU(out[0,:,:,0], self.header)
         import os.path
         if os.path.exists(self.output):
             os.system('rm {0}'.format(self.output))
@@ -84,8 +89,8 @@ class enhance(object):
         # import matplotlib.pyplot as plt
         # plt.imshow(out[0,:,:,0])
         # plt.savefig('hmi.pdf')
-   
-            
+
+
 if (__name__ == '__main__'):
 
     parser = argparse.ArgumentParser(description='Prediction')
@@ -100,15 +105,16 @@ if (__name__ == '__main__'):
 
     f = fits.open(parsed['input'])
     imgs = f[0].data
+    #hdr = f[0].header
 
     print('Model : {0}'.format(parsed['type']))
     out = enhance('{0}'.format(parsed['input']), depth=int(parsed['depth']), model=parsed['model'], activation=parsed['activation'],ntype=parsed['type'], output=parsed['out'])
-    out.define_network(image=imgs)
+    out.define_network() #image=imgs)
     out.predict()
     # To avoid the TF_DeleteStatus message:
     # https://github.com/tensorflow/tensorflow/issues/3388
     ktf.clear_session()
-    
+
     # python enhance.py -i samples/hmi.fits -t intensity -o output/hmi_enhanced.fits
 
     # python enhance.py -i samples/blos.fits -t blos -o output/blos_enhanced.fits

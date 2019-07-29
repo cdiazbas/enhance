@@ -106,8 +106,8 @@ class enhance(object):
 
         #Number of pixel per axis
         if 'naxis1' in self.header:
-            self.header['naxis1'] /= scale_factor_x
-            self.header['naxis2'] /= scale_factor_y
+            self.header['naxis1'] = new_dim[1]
+            self.header['naxis2'] = new_dim[0]
 
         print("Saving data...")
         hdu = fits.PrimaryHDU(new_data, self.header)

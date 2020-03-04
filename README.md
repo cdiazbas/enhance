@@ -31,7 +31,7 @@ python enhance.py -i samples/hmi.fits -t intensity -o output/hmi_enhanced.fits
 python enhance.py -i samples/blos.fits -t blos -o output/blos_enhanced.fits
 ```
 
-We provide two files to test `Enhance` (Fig. 1). The intensity images must be normalized to the quiet sun intensity and the magnetogram must be in kG.
+We provide two files to test `Enhance` (Fig. 1). The intensity images must be normalized to the quiet sun intensity and the magnetogram must be in kG, which is now done automatically in the script.
 
 ## Using `Enhance` for training
 

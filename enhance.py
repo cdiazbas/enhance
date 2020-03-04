@@ -1,6 +1,7 @@
 import warnings
 # To deactivate future warnings:
-warnings.simplefilter(action='ignore', category=FutureWarning)
+# warnings.simplefilter(action='ignore', category=FutureWarning)
+warnings.filterwarnings("ignore")
 
 import numpy as np
 import platform
@@ -12,7 +13,6 @@ import tensorflow as tf
 import keras as krs
 import keras.backend.tensorflow_backend as ktf
 import models as nn_model
-
 
 # To deactivate warnings: https://github.com/tensorflow/tensorflow/issues/7778
 os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
@@ -33,8 +33,11 @@ class enhance(object):
         self.hdu = fits.open(inputFile)
         #Autofix broken header files according to fits standard
         self.hdu.verify('silentfix')
-        self.image = self.hdu[0].data
-        self.header = self.hdu[0].header
+        index = 0
+        if np.all(self.hdu[index].data == None): index = 1
+        self.image = np.nan_to_num(self.hdu[index].data[:,:])
+        self.header = self.hdu[index].header
+        print('Size image: ',self.image.shape)
 
         self.input = inputFile
         self.depth = depth
@@ -42,18 +45,26 @@ class enhance(object):
         self.activation = activation
         self.ntype = ntype
         self.output = output
+        self.big_image = 2048
+        self.split = False
+        self.norm = 1.0
 
+        if self.ntype == 'intensity': 
+            self.norm = np.max(self.image)
+        if self.ntype == 'blos': 
+            self.norm = 1e3
+        
+        self.image = self.image/self.norm
 
     def define_network(self): #, image):
         print("Setting up network...")
-
         #self.image = image
-        image = self.image
-        self.nx = image.shape[1]
-        self.ny = image.shape[0]
-
-        if (self.network_type == 'encdec'):
-            self.model = nn_model.encdec(self.ny, self.nx, 0.0, self.depth, n_filters=64)
+        self.nx = self.image.shape[1]
+        self.ny = self.image.shape[0]
+        if self.nx > self.big_image or self.ny > self.big_image:
+            self.split = True
+            self.nx = int(self.image.shape[1]/2)
+            self.ny = int(self.image.shape[0]/2)
 
         if (self.network_type == 'keepsize'):
             self.model = nn_model.keepsize(self.ny, self.nx, 0.0, self.depth,n_filters=64, l2_reg=1e-7)
@@ -61,21 +72,39 @@ class enhance(object):
         print("Loading weights...")
         self.model.load_weights("network/{0}_weights.hdf5".format(self.ntype))
 
+    def predict_image(self,inputdata):
+        # Patch for big images in keras
+        if self.split is True: 
+            M = inputdata.shape[1]//2
+            N = inputdata.shape[2]//2
+            out = np.empty((1,inputdata.shape[1]*2,inputdata.shape[2]*2, 1))
+            for x in range(0,inputdata.shape[1],M):
+                for y in range(0,inputdata.shape[2],N):
+                    out[:,x*2:x*2+M*2,y*2:y*2+N*2,:] = self.model.predict(inputdata[:,x:x+M,y:y+N,:])
+            
+            self.nx = inputdata.shape[2]
+            self.ny = inputdata.shape[1]
 
-    def predict(self,plot_option=False):
-        print("Predicting validation data...")
+        else:
+            out = self.model.predict(inputdata)
+            print(self.model.predict(inputdata).shape)
+        return out
+    
+    def predict(self,plot_option=False,sunpy_map=False):
+        print("Predicting data...")
 
-        input_validation = np.zeros((1,self.ny,self.nx,1), dtype='float32')
+        input_validation = np.zeros((1,self.image.shape[0],self.image.shape[1],1), dtype='float32')
         input_validation[0,:,:,0] = self.image
 
         start = time.time()
-        out = self.model.predict(input_validation)
+        out = self.predict_image(input_validation)
         end = time.time()
         print("Prediction took {0:3.2} seconds...".format(end-start))
 
-        print("Updating header")
+        print("Updating header ...")
         #Calculate scale factor (currently should be 0.5 because of 2 factor upscale)
         new_data = out[0,:,:,0]
+        new_data = new_data*self.norm
         new_dim = new_data.shape
 
         scale_factor_x = float(self.nx / new_dim[1])
@@ -95,8 +124,8 @@ class enhance(object):
 
         #Patch center with respect of lower left corner
         if 'crpix1' in self.header:
-            self.header['crpix1'] = (new_dim[1] + 1) / 2.
-            self.header['crpix2'] = (new_dim[0] + 1) / 2.
+            self.header['crpix1'] /= scale_factor_x
+            self.header['crpix2'] /= scale_factor_y
 
         #Number of pixel per axis
         if 'naxis1' in self.header:
@@ -109,15 +138,29 @@ class enhance(object):
         if os.path.exists(self.output):
             os.system('rm {0}'.format(self.output))
             print('Overwriting...')
-        hdu.writeto('{0}'.format(self.output))
+        hdu.writeto('{0}'.format(self.output), output_verify="ignore")
 
         if plot_option is True:
             import matplotlib.pyplot as plt
+            plt.figure()
             plt.subplot(121)
             plt.imshow(self.image,cmap='gray',origin='lower',vmin=self.image.min(),vmax=self.image.max())
             plt.subplot(122)
             plt.imshow(out[0,:,:,0],cmap='gray',origin='lower',vmin=self.image.min(),vmax=self.image.max())
+            plt.tight_layout()
             plt.savefig('hmi_test.pdf', bbox_inches='tight')
+
+            if sunpy_map is True:
+                import sunpy.map
+                sdomap0 =sunpy.map.Map(self.input)
+                sdomap1 =sunpy.map.Map(self.output)
+                plt.figure()
+                plt.subplot(121)
+                sdomap0.plot()
+                plt.subplot(122)
+                sdomap1.plot()
+                plt.tight_layout()
+                plt.savefig('hmi_test2.pdf', bbox_inches='tight')
 
 
 if (__name__ == '__main__'):

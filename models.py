@@ -2,8 +2,7 @@ from keras.layers import Input, Conv2D, Activation, BatchNormalization, Gaussian
 from keras.models import Model
 from keras.regularizers import l2
 import tensorflow as tf
-from keras.engine.topology import Layer
-from keras.engine import InputSpec
+from tensorflow.keras.layers import Layer, InputSpec
 from keras.utils import conv_utils
 import keras.backend as K
 import keras
@@ -13,10 +12,19 @@ if version.parse(keras.__version__) < version.parse("2.2.1"):
     current_version = False
     normdata = conv_utils.normalize_data_format
 else:
-    normdata = K.normalize_data_format
+    # normdata = K.normalize_data_format
+    def normdata(value):
+        if value is None:
+            value = K.image_data_format()
+        data_format = value.lower()
+        if data_format not in {'channels_first', 'channels_last'}:
+            raise ValueError('The `data_format` argument must be one of '
+                            '"channels_first", "channels_last". Received: ' +
+                            str(value))
+        return data_format
 
-# To deactivate warnings: https://stackoverflow.com/questions/54685134/warning-from-tensorflow-when-creating-vgg16
-tf.logging.set_verbosity(tf.logging.ERROR)
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 
 
 def spatial_reflection_2d_padding(x, padding=((1, 1), (1, 1)), data_format=None):
@@ -188,7 +196,7 @@ def keepsize_256(nx, ny, noise, depth, activation='relu', n_filters=64, l2_reg=1
     x = BatchNormalization()(x)
     x = add([x, x0])
 
-# Upsampling for superresolution
+    # Upsampling for superresolution
     x = UpSampling2D()(x)
     x = ReflectionPadding2D()(x)
     x = Conv2D(4*n_filters, (3, 3), padding='valid', kernel_initializer='he_normal', kernel_regularizer=l2(l2_reg))(x)
@@ -232,7 +240,7 @@ def keepsize(nx, ny, noise, depth, activation='relu', n_filters=64, l2_reg=1e-7)
     x = BatchNormalization()(x)
     x = add([x, x0])
 
-# Upsampling for superresolution
+    # Upsampling for superresolution
     x = UpSampling2D()(x)
     x = ReflectionPadding2D()(x)
     x = Conv2D(n_filters, (3, 3), padding='valid', kernel_initializer='he_normal', kernel_regularizer=l2(l2_reg))(x)

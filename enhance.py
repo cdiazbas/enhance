@@ -1,8 +1,3 @@
-import warnings
-# To deactivate future warnings:
-# warnings.simplefilter(action='ignore', category=FutureWarning)
-warnings.filterwarnings("ignore")
-
 import numpy as np
 import platform
 import os
@@ -11,17 +6,10 @@ import argparse
 from astropy.io import fits
 import tensorflow as tf
 import keras as krs
-import keras.backend.tensorflow_backend as ktf
 import models as nn_model
-
-# To deactivate warnings: https://github.com/tensorflow/tensorflow/issues/7778
-os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
-tf.logging.set_verbosity(tf.logging.ERROR)
-
 
 # Using TensorFlow backend
 os.environ["KERAS_BACKEND"] = "tensorflow"
-
 
 print('tensorflow version:',tf.__version__)
 print('keras version:',krs.__version__)
@@ -87,7 +75,8 @@ class enhance(object):
 
         else:
             out = self.model.predict(inputdata)
-            print(self.model.predict(inputdata).shape)
+        
+        print('New size: ',out.shape)
         return out
     
     def predict(self,plot_option=False,sunpy_map=False):
@@ -102,7 +91,7 @@ class enhance(object):
         print("Prediction took {0:3.2} seconds...".format(end-start))
 
         print("Updating header ...")
-        #Calculate scale factor (currently should be 0.5 because of 2 factor upscale)
+        # Calculate scale factor (currently should be 0.5 because of 2 factor upscale)
         new_data = out[0,:,:,0]
         new_data = new_data*self.norm
         new_dim = new_data.shape
@@ -132,6 +121,7 @@ class enhance(object):
             self.header['naxis1'] = new_dim[1]
             self.header['naxis2'] = new_dim[0]
 
+
         print("Saving data...")
         hdu = fits.PrimaryHDU(new_data, self.header)
         import os.path
@@ -141,6 +131,7 @@ class enhance(object):
         hdu.writeto('{0}'.format(self.output), output_verify="ignore")
 
         if plot_option is True:
+            print("Plotting...")
             import matplotlib.pyplot as plt
             plt.figure()
             plt.subplot(121)
@@ -152,8 +143,8 @@ class enhance(object):
 
             if sunpy_map is True:
                 import sunpy.map
-                sdomap0 =sunpy.map.Map(self.input)
-                sdomap1 =sunpy.map.Map(self.output)
+                sdomap0 =sunpy.map.Map(self.input,self.header)
+                sdomap1 =sunpy.map.Map(self.output,self.header)
                 plt.figure()
                 plt.subplot(121)
                 sdomap0.plot()
@@ -184,18 +175,10 @@ if (__name__ == '__main__'):
     parser.add_argument('-t','--type', help='type', choices=['intensity', 'blos'], default='intensity')
     parsed = vars(parser.parse_args())
 
-    #f = fits.open(parsed['input'])
-    #imgs = f[0].data
-    #hdr = f[0].header
 
     print('Model : {0}'.format(parsed['type']))
     out = enhance('{0}'.format(parsed['input']), depth=int(parsed['depth']), model=parsed['model'], activation=parsed['activation'],ntype=parsed['type'], output=parsed['out'])
-    #out.define_network(image=imgs)
     out.define_network()
-    out.predict(plot_option=False)
-    
-    # To avoid the TF_DeleteStatus message:
-    # https://github.com/tensorflow/tensorflow/issues/3388
-    ktf.clear_session()
+    out.predict()
  
 

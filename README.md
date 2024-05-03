@@ -16,7 +16,14 @@ We have obtained deconvolved and supperresolved HMI images. To solve this ill-de
 
 ## Requirements of `Enhance`
 
-As this software was developed with some specific libraries you have to install: "astropy", "keras" and "tensorflow". If `conda` is installed in your machine you can type: `conda install astropy`, `conda install tensorflow`, `conda install keras`. We only support keras v2.
+An `environment.yml` file is provided to create a conda environment with all the dependencies needed to run `Enhance`. You can create the environment with the following command:
+
+```conda env create -f environment.yml```
+
+If you have your own environment, so you can also install them manually with conda:
+
+```conda install numpy astropy tensorflow```
+
 
 
 ## Using `Enhance` for prediction

@@ -3,7 +3,8 @@ from keras.models import Model
 from keras.regularizers import l2
 import tensorflow as tf
 from tensorflow.keras.layers import Layer, InputSpec
-from keras.utils import conv_utils
+# from keras.utils import conv_utils
+from tensorflow.python.keras.utils import conv_utils
 import keras.backend as K
 import keras
 
